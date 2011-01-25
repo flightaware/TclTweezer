@@ -1,0 +1,18 @@
+2004-12-25 Karl Lehenbauer <karl-tweezer@sc.com>
+    * Release 0.0
+
+    * Removed option "shared" -- it's true whenever refcount > 1
+
+    * Remove cruft left over from sample application.
+
+    * Add of tweeter.n manual page.
+
+    * Create tests.
+
+2004-12-01 Karl Lehenbauer <karl-tweezer@sc.com>
+    * Support safe interpreters (by recognizing them and not allowing
+      safe interpreters anywhere near the tweezer.
+
+2004-11-29 Karl Lehenbauer <karl-tweezer@sc.com>
+    * TEA-compliant build
+
