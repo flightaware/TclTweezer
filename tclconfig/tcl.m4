@@ -9,7 +9,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: tcl.m4,v 1.157 2010/12/15 05:35:07 stwo Exp $
+# RCS: @(#) $Id: tcl.m4,v 1.150 2010/09/14 23:26:43 hobbs Exp $
 
 AC_PREREQ(2.57)
 
@@ -1141,7 +1141,9 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 	CFLAGS_OPTIMIZE=-O2
 	CFLAGS_WARNING="-Wall"
     ], [CFLAGS_WARNING=""])
-    AC_CHECK_TOOL(AR, ar)
+dnl FIXME: Replace AC_CHECK_PROG with AC_CHECK_TOOL once cross compiling is fixed.
+dnl AC_CHECK_TOOL(AR, ar)
+    AC_CHECK_PROG(AR, ar, ar)
     STLIB_LD='${AR} cr'
     LD_LIBRARY_PATH_VAR="LD_LIBRARY_PATH"
     AS_IF([test "x$SHLIB_VERSION" = x],[SHLIB_VERSION="1.0"])
@@ -1170,7 +1172,7 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 			PATH64="${MSSDK}/Bin/Win64"
 			;;
 		esac
-		if test "$GCC" != "yes" -a ! -d "${PATH64}" ; then
+		if test ! -d "${PATH64}" ; then
 		    AC_MSG_WARN([Could not find 64-bit $MACHINE SDK to enable 64bit mode])
 		    AC_MSG_WARN([Ensure latest Platform SDK is installed])
 		    do64bit="no"
@@ -1295,7 +1297,7 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 
 	    if test "$GCC" = "yes"; then
 		# mingw gcc mode
-		AC_CHECK_TOOL(RC, windres)
+		RC="windres"
 		CFLAGS_DEBUG="-g"
 		CFLAGS_OPTIMIZE="-O2 -fomit-frame-pointer"
 		SHLIB_LD="$CC -shared"
@@ -1437,7 +1439,7 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 	    ])
 	    AC_CHECK_LIB(dld, shl_load, tcl_ok=yes, tcl_ok=no)
 	    AS_IF([test "$tcl_ok" = yes], [
-		LDFLAGS="$LDFLAGS -Wl,-E"
+		LDFLAGS="$LDFLAGS -E"
 		CC_SEARCH_FLAGS='-Wl,+s,+b,${LIB_RUNTIME_DIR}:.'
 		LD_SEARCH_FLAGS='+s +b ${LIB_RUNTIME_DIR}:.'
 		LD_LIBRARY_PATH_VAR="SHLIB_PATH"
@@ -1575,30 +1577,13 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 		LD_SEARCH_FLAGS='-Wl,-rpath,${LIB_RUNTIME_DIR}'])
 	    ;;
 	OpenBSD-*)
-	    arch=`arch -s`
-	    case "$arch" in
-	    m88k|vax)
-		SHLIB_SUFFIX=""
-		SHARED_LIB_SUFFIX=""
-		;;
-	    *)
-		SHLIB_CFLAGS="-fPIC"
-		SHLIB_LD='${CC} -shared ${SHLIB_CFLAGS}'
-		SHLIB_SUFFIX=".so"
-		AS_IF([test $doRpath = yes], [
-		    CC_SEARCH_FLAGS='-Wl,-rpath,${LIB_RUNTIME_DIR}'])
-		LD_SEARCH_FLAGS=${CC_SEARCH_FLAGS}
-		SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.so.${SHLIB_VERSION}'
-		;;
-	    esac
-	    case "$arch" in
-	    m88k|vax)
-		CFLAGS_OPTIMIZE="-O1"
-		;;
-	    *)
-		CFLAGS_OPTIMIZE="-O2"
-		;;
-	    esac
+	    SHLIB_CFLAGS="-fPIC"
+	    SHLIB_LD='${CC} -shared ${SHLIB_CFLAGS}'
+	    SHLIB_SUFFIX=".so"
+	    AS_IF([test $doRpath = yes], [
+		CC_SEARCH_FLAGS='-Wl,-rpath,${LIB_RUNTIME_DIR}'])
+	    LD_SEARCH_FLAGS=${CC_SEARCH_FLAGS}
+	    SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.so.${SHLIB_VERSION}'
 	    AC_CACHE_CHECK([for ELF], tcl_cv_ld_elf, [
 		AC_EGREP_CPP(yes, [
 #ifdef __ELF__
@@ -1609,10 +1594,10 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 		LDFLAGS=-Wl,-export-dynamic
 	    ], [LDFLAGS=""])
 	    AS_IF([test "${TCL_THREADS}" = "1"], [
-		# On OpenBSD:	Compile with -pthread
-		#		Don't link with -lpthread
+		# OpenBSD builds and links with -pthread, never -lpthread.
 		LIBS=`echo $LIBS | sed s/-lpthread//`
 		CFLAGS="$CFLAGS -pthread"
+		SHLIB_CFLAGS="$SHLIB_CFLAGS -pthread"
 	    ])
 	    # OpenBSD doesn't do version numbers with dots.
 	    UNSHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.a'
@@ -1661,7 +1646,7 @@ AC_DEFUN([TEA_CONFIG_CFLAGS], [
 	    # Version numbers are dot-stripped by system policy.
 	    TCL_TRIM_DOTS=`echo ${VERSION} | tr -d .`
 	    UNSHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}.a'
-	    SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}\$\{DBGX\}.so.1'
+	    SHARED_LIB_SUFFIX='${TCL_TRIM_DOTS}\$\{DBGX\}.so'
 	    TCL_LIB_VERSIONS_OK=nodots
 	    ;;
 	Darwin-*)
@@ -2768,17 +2753,8 @@ TEA version not specified.])
 	    ;;
 	*)
 	    CYGPATH=echo
-	    # Maybe we are cross-compiling....
-	    case ${host_alias} in
-		*mingw32*)
-		EXEEXT=".exe"
-		TEA_PLATFORM="windows"
-		;;
-	    *)
-		EXEEXT=""
-		TEA_PLATFORM="unix"
-		;;
-	    esac
+	    EXEEXT=""
+	    TEA_PLATFORM="unix"
 	    ;;
     esac
 
@@ -3107,6 +3083,8 @@ AC_DEFUN([TEA_SETUP_COMPILER_CC], [
     AC_PROG_CC
     AC_PROG_CPP
 
+    AC_PROG_INSTALL
+
     #--------------------------------------------------------------------
     # Checks to see if the make program sets the $MAKE variable.
     #--------------------------------------------------------------------
@@ -3117,7 +3095,7 @@ AC_DEFUN([TEA_SETUP_COMPILER_CC], [
     # Find ranlib
     #--------------------------------------------------------------------
 
-    AC_CHECK_TOOL(RANLIB, ranlib)
+    AC_PROG_RANLIB
 
     #--------------------------------------------------------------------
     # Determines the correct binary file extension (.o, .obj, .exe etc.)
